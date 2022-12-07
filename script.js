@@ -11,7 +11,11 @@ let scene,
     city, 
     buildings,
     sunGroup,
-    rotateEnabled;
+    rotateEnabled,
+    unselectedColor,
+    selectedColor,
+    selectedObject,
+    modifying; //adding, removing or udpating buildings switched on
 
 function Initialize() {
 
@@ -41,11 +45,11 @@ function Initialize() {
   camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
   camera.position.set(0, 10, 20);
   camera.lookAt(new THREE.Vector3(0,3,0));
-
+  
   //scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x29293d);
-
+  
   //Light
   let sunColor = new THREE.Vector3(1.0, 1.0, 1.0);
   let sunIntensity = 1.0;
@@ -63,44 +67,48 @@ function Initialize() {
   sun.shadow.camera.right = -100;
   sun.shadow.camera.top = 100;
   sun.shadow.camera.bottom = -100;
-
+  
   sunGroup = new THREE.Group(); //used to turn the sun around the city with rotation center (0,0,0)
   sunGroup.add(sun);
-
+  
   const ambiantLight = new THREE.AmbientLight(0x080802);
   scene.add(ambiantLight);
-
+  
   const hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.2);
   scene.add(hemiLight);
-
+  
   //CONTROLS
   controls = new OrbitControls(
     camera, 
     renderer.domElement);
   controls.target.set(0, 3, 0);
-
+  
   //Options
   rotateEnabled = false;
+  selectedObject = null;
+  modifying = false;
 
-  //Material creation
-
+  //MATERIALS
+  unselectedColor =  new THREE.Color(0xffffff);
+  selectedColor = new THREE.Color(0x00ffff);
+  
   const loader = new THREE.TextureLoader();
-
+  
   const buildTextMaterial = new THREE.MeshStandardMaterial({
     map: loader.load('resources/building2.jpg')
   });
-
+  
   // uniform to provide to the shaders
   var myUniforms = {
-      pos_lumiere : {type: "v3", value: sunPos},
-      poscamera : {type: "v3", value: camera.position},
-      col_lumiere : {type: "v3", value: sunColor},
-      col_obj: {type: "v3", value: new THREE.Vector3(1.0, 0.6, 0.3)},
-      col_spec_lumiere : {type: "v3", value: sunColor},
-      col_spec_obj : {type: "v3", value: new THREE.Vector3(1.0, 0.6, 0.3)},
-      alpha : {type: "f", value: 1}
+    pos_lumiere : {type: "v3", value: sunPos},
+    poscamera : {type: "v3", value: camera.position},
+    col_lumiere : {type: "v3", value: sunColor},
+    col_obj: {type: "v3", value: new THREE.Vector3(1.0, 0.6, 0.3)},
+    col_spec_lumiere : {type: "v3", value: sunColor},
+    col_spec_obj : {type: "v3", value: new THREE.Vector3(1.0, 0.6, 0.3)},
+    alpha : {type: "f", value: 1}
   };
-
+    
       
   var shaderMaterial = new THREE.ShaderMaterial({
       uniforms : myUniforms,
@@ -142,7 +150,7 @@ function Initialize() {
   
   function newBuilding(width, height, depth, buildings){
       const boxGeometry= new THREE.BoxGeometry(width,height,depth);
-      const material = new THREE.MeshStandardMaterial({color: 0xffffff});
+      const material = new THREE.MeshStandardMaterial({color: unselectedColor});
       const building = new THREE.Mesh(boxGeometry, material);
       building.castShadow = true;
       building.receiveShadow = true;
@@ -179,6 +187,7 @@ function Initialize() {
   house3.position.x -= 2.5; house3.position.z -= 0.75;
   house4.position.x -= 2.5; house4.position.z -= 1.75;
 
+  city.rotation.y += Math.PI / 4;
   window.requestAnimationFrame(animate);
 }
 
@@ -186,14 +195,12 @@ function onPointerMove( event ) {
   event.preventDefault();
   // calculate mouse position in normalized device coordinates
   // (-1 to +1) for both components
-  console.log("onPointerMove entered");
-  mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-  console.log("Mouse : ", mouse);
+  var rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ( ( event.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
+  mouse.y = - ( ( event.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
 
 }
 
-const selectedColor = new THREE.Color(0x00ffff);
 
 function hoverBuildings(){
   raycaster.setFromCamera(mouse, camera);
@@ -203,32 +210,65 @@ function hoverBuildings(){
       intersects[0].object.material.transparent = true;
       intersects[0].object.material.opacity = 0.5;
       intersects[0].object.material.color = selectedColor;
+      selectedObject = intersects[0].object;
     }
+  }
+}
+
+function resetMaterial(object){
+  if(object.material){
+    object.material.opacity = 1.0;
+    object.material.color = unselectedColor;
   }
 }
 
 function OnWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  _threejs.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function animate(){
   window.requestAnimationFrame(animate);
   controls.update();
-  hoverBuildings();
-  sunGroup.rotation.z += 0.005;
+
+  if(modifying){
+    if (selectedObject){
+        resetMaterial(selectedObject);
+        selectedObject = null;
+    }
+    hoverBuildings();
+  }
   if(rotateEnabled){
     city.rotation.y += 0.005;
   }
+  if (sunGroup.rotation.z < 0){
+    sunGroup.rotation.z += 0.05;
+  }
+  else {
+    sunGroup.rotation.z += 0.001;
+  }
+
   renderer.render(scene, camera);
 }
 
+
+// HTML INTERACTIONS
+
+document.getElementById("addButton").onclick = function() {
+  modifying = !modifying;
+};
+document.getElementById("removeButton").onclick = function() {
+  modifying = !modifying;
+};
+document.getElementById("updateButton").onclick = function() {
+  modifying = !modifying;
+};
 document.getElementById("rotationButton").onclick = function() {ChangeRotationState()};
 
 function ChangeRotationState(){
-  const previous = _APP.rotateEnabled;
-  _APP.rotateEnabled = !_APP.rotateEnabled;
+  const previous = rotateEnabled;
+  rotateEnabled = !rotateEnabled;
   if (previous){
     document.getElementById("rotationButton").innerHTML = "Enable Rotation";
   }
