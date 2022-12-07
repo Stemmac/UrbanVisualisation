@@ -15,7 +15,9 @@ let scene,
     unselectedColor,
     selectedColor,
     selectedObject,
-    modifying; //adding, removing or udpating buildings switched on
+    removing,
+    adding,
+    updating;
 
 function Initialize() {
 
@@ -86,7 +88,9 @@ function Initialize() {
   //Options
   rotateEnabled = false;
   selectedObject = null;
-  modifying = false;
+  removing = false;
+  adding = false;
+  updating = false;
 
   //MATERIALS
   unselectedColor =  new THREE.Color(0xffffff);
@@ -201,6 +205,14 @@ function onPointerMove( event ) {
 
 }
 
+function onPointerDown( event ){
+  event.preventDefault();
+  if(selectedObject){
+    if(removing){
+      buildings.remove(selectedObject);
+    }
+  }
+}
 
 function hoverBuildings(){
   raycaster.setFromCamera(mouse, camera);
@@ -219,6 +231,7 @@ function resetMaterial(object){
   if(object.material){
     object.material.opacity = 1.0;
     object.material.color = unselectedColor;
+    selectedObject = null;
   }
 }
 
@@ -232,12 +245,16 @@ function animate(){
   window.requestAnimationFrame(animate);
   controls.update();
 
-  if(modifying){
+  if(adding || removing || updating){
+    //making sure that no object remains selected when it's not hovered.
     if (selectedObject){
         resetMaterial(selectedObject);
         selectedObject = null;
     }
+
+    //selecting building if it is hovered
     hoverBuildings();
+
   }
   if(rotateEnabled){
     city.rotation.y += 0.005;
@@ -256,13 +273,19 @@ function animate(){
 // HTML INTERACTIONS
 
 document.getElementById("addButton").onclick = function() {
-  modifying = !modifying;
+  removing = false;
+  updating = false;
+  adding = !adding;
 };
 document.getElementById("removeButton").onclick = function() {
-  modifying = !modifying;
+  removing = !removing;
+  adding = false;
+  updating = false;
 };
 document.getElementById("updateButton").onclick = function() {
-  modifying = !modifying;
+  adding = false;
+  removing = false;
+  updating = !updating;
 };
 document.getElementById("rotationButton").onclick = function() {ChangeRotationState()};
 
@@ -282,7 +305,7 @@ function ChangeRotationState(){
 window.addEventListener('resize', () => {
   OnWindowResize();
 }, false);
-//window.addEventListener('click', onClick);
+window.addEventListener('pointerdown', onPointerDown);
 window.addEventListener('pointermove', onPointerMove);
 
 window.onload = Initialize;
