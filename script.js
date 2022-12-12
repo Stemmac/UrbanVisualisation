@@ -84,7 +84,7 @@ function Initialize() {
     camera, 
     renderer.domElement);
   controls.target.set(0, 3, 0);
-  
+
   //Options
   rotateEnabled = false;
   selectedObject = null;
@@ -97,9 +97,12 @@ function Initialize() {
   selectedColor = new THREE.Color(0x00ffff);
   
   const loader = new THREE.TextureLoader();
-  
+  let towerTexture = loader.load('resources/building2.jpg');
+  towerTexture.wrapS = THREE.RepeatWrapping;
+  towerTexture.wrapT = THREE.RepeatWrapping;
+  towerTexture.repeat.set( 1, 1 );
   const buildTextMaterial = new THREE.MeshStandardMaterial({
-    map: loader.load('resources/building2.jpg')
+    map: towerTexture
   });
   
   // uniform to provide to the shaders
@@ -205,15 +208,6 @@ function onPointerMove( event ) {
 
 }
 
-function onPointerDown( event ){
-  event.preventDefault();
-  if(selectedObject){
-    if(removing){
-      buildings.remove(selectedObject);
-    }
-  }
-}
-
 function hoverBuildings(){
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(buildings.children, true);
@@ -223,6 +217,17 @@ function hoverBuildings(){
       intersects[0].object.material.opacity = 0.5;
       intersects[0].object.material.color = selectedColor;
       selectedObject = intersects[0].object;
+    }
+  }
+  
+}
+
+function onKeyDown(event){
+
+  let keyCode = event.code;
+  if (keyCode == 'Enter') {
+    if(removing){
+      buildings.remove(selectedObject);
     }
   }
 }
@@ -241,6 +246,8 @@ function OnWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+///     MAIN FUNCTION     ///
+
 function animate(){
   window.requestAnimationFrame(animate);
   controls.update();
@@ -251,10 +258,13 @@ function animate(){
         resetMaterial(selectedObject);
         selectedObject = null;
     }
-
+    
     //selecting building if it is hovered
     hoverBuildings();
 
+    if(selectedObject){
+      document.addEventListener("keydown", onKeyDown, false);
+    }
   }
   if(rotateEnabled){
     city.rotation.y += 0.005;
@@ -305,7 +315,7 @@ function ChangeRotationState(){
 window.addEventListener('resize', () => {
   OnWindowResize();
 }, false);
-window.addEventListener('pointerdown', onPointerDown);
+
 window.addEventListener('pointermove', onPointerMove);
 
 window.onload = Initialize;
