@@ -11,7 +11,15 @@
     <header>Urban Visualisation</header>
     <nav>
         <div class = "flex-container">
-            <button type="button" id="addButton">Add buildings</button>
+          <div class="dropdown">
+            <button type="dropbtn" id="addButton">Add buildings</button>
+            <div class="dropdown-content">
+              <a href="#" id="house">Add house </a>
+              <a href="#" id="tower">Add tower </a>
+              <a href="#" id="medium_building">Medium building</a>
+            </div>
+          </div>
+            
             <button type="button" id="removeButton">Remove buildings</button>
             <button type="button" id="updateButton">Update buildings</button>
             <button type="button" id="rotationButton">Enable rotation</button>

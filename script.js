@@ -17,6 +17,9 @@ let scene,
     selectedObject,
     removing,
     adding,
+    house,
+    tower,
+    medium_building,
     updating;
 
 function Initialize() {
@@ -91,6 +94,10 @@ function Initialize() {
   removing = false;
   adding = false;
   updating = false;
+  house = false;
+  tower = false;
+  medium_building = false;
+
 
   //MATERIALS
   unselectedColor =  new THREE.Color(0xffffff);
@@ -209,6 +216,7 @@ function onPointerMove( event ) {
 }
 
 function hoverBuildings(){
+  console.log("hover called");
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(buildings.children, true);
   if(intersects.length > 0){
@@ -287,7 +295,27 @@ document.getElementById("addButton").onclick = function() {
   updating = false;
   adding = !adding;
 };
+document.getElementById("house").onclick = function() {
+  house = true;
+  tower = false;
+  medium_building = false;
+  console.log("house");
+};
+document.getElementById("tower").onclick = function() {
+  house = false;
+  tower = true;
+  medium_building = false;
+  console.log("tower");
+};
+document.getElementById("medium_building").onclick = function() {
+  house = false;
+  tower = false;
+  medium_building = true;
+  console.log("medium_building");
+};
+
 document.getElementById("removeButton").onclick = function() {
+  console.log("onclick Remove");
   removing = !removing;
   adding = false;
   updating = false;
@@ -309,6 +337,8 @@ function ChangeRotationState(){
     document.getElementById("rotationButton").innerHTML = "Disable Rotation";
   }
 }
+
+
 
 //EVENT LISTENERS
 
