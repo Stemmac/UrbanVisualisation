@@ -14,8 +14,8 @@
           <div class="dropdown">
             <button type="dropbtn" id="addButton">Add buildings</button>
             <div class="dropdown-content">
-              <a href="#" id="house">Add house </a>
-              <a href="#" id="tower">Add tower </a>
+              <a href="#" id="house">Add house</a>
+              <a href="#" id="tower">Add tower</a>
               <a href="#" id="medium_building">Medium building</a>
             </div>
           </div>
@@ -23,80 +23,9 @@
             <button type="button" id="removeButton">Remove buildings</button>
             <button type="button" id="updateButton">Update buildings</button>
             <button type="button" id="rotationButton">Enable rotation</button>
-            <button type="button">Show heatmap</button>
-            <button type="button">Light intensity animation</button>
+            <button type="button" id="realisticSunlight">Enable realistic sunlight</button>
         </div>
     </nav>
-    <script type="x-shader/x-vertex" id="vertex_shader">
-        /*****************************************************************************        
-         * VERTEX SHADER
-         ****************************************************************************/
-        uniform vec3 pos_lumiere;
-        uniform vec3 pos_camera;
-        
-        varying vec3 _n;
-        varying vec3 _d;
-        varying vec3 _r;
-        varying vec3 _v;
-        
-         void main()
-        {
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        
-            //DIRECTION A LA LUMIERE
-            
-            //conversion des coordonnées de referentiel de l'object au monde
-            vec4 tmp_pos = modelMatrix * vec4(position, 1.0);
-        
-            //passage au vecteur 3
-            vec3 _pos = tmp_pos.xyz / tmp_pos.w;
-        
-            //calcul de la direction
-            _d = (pos_lumiere - _pos);
-        
-            //NORMALE
-            _n = normalMatrix * normal;
-        
-            //rayon incident est direction à lumière
-            _r = reflect(_d, _n);
-        
-            //direction au point de vue
-            _v = pos_camera - position;
-        
-        }
-                    </script>
-        
-                    <script type="x-shader/x-fragment" id="fragment_shader" src="classicShader.frag">
-        /*****************************************************************************        
-         * FRAGMENT SHADER
-         ****************************************************************************/
-         uniform vec3 col_lumiere;
-         uniform vec3 col_obj;
-         uniform vec3 col_spec_lumiere;
-         uniform vec3 col_spec_obj;
-         uniform float alpha;
-         varying vec3 _n;
-         varying vec3 _d;
-         varying vec3 _r;
-         varying vec3 _v;
-        
-         void main()
-        {
-        
-            //COULEUR DIFFUSE
-        
-            float dotProd = dot(normalize(_n), normalize(_d));
-        
-            //COULEUR SPECULAIRE
-        
-            float dotProdSpec = clamp(dot(-normalize(_r), normalize(_v)), 0.0, 1.0);
-            float reflect = pow(dotProdSpec, alpha);
-        
-        
-            gl_FragColor = vec4(col_obj * col_lumiere * dotProd , 1.0);
-            gl_FragColor += vec4(col_spec_obj * col_spec_lumiere * dotProdSpec, 1.0);
-        }
-    </script>
   <script src="./script.js" type="module">
   </script>
 </body>

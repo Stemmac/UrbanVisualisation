@@ -10,11 +10,15 @@ let scene,
     controls, 
     city, 
     buildings,
+    plane,
     sunGroup,
+    sunDefaultRotation,
     rotateEnabled,
+    realisticSunlight,
     unselectedColor,
     selectedColor,
     selectedObject,
+    point,
     removing,
     adding,
     house,
@@ -75,11 +79,13 @@ function Initialize() {
   
   sunGroup = new THREE.Group(); //used to turn the sun around the city with rotation center (0,0,0)
   sunGroup.add(sun);
+  sunDefaultRotation = 0.3;
+  sunGroup.rotation.z = sunDefaultRotation;
   
   const ambiantLight = new THREE.AmbientLight(0x080802);
   scene.add(ambiantLight);
   
-  const hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.2);
+  const hemiLight = new THREE.HemisphereLight( 0xffffbb, 0x080820, 0.25);
   scene.add(hemiLight);
   
   //CONTROLS
@@ -97,6 +103,8 @@ function Initialize() {
   house = false;
   tower = false;
   medium_building = false;
+  realisticSunlight = false;
+  point = null;
 
 
   //MATERIALS
@@ -108,28 +116,16 @@ function Initialize() {
   towerTexture.wrapS = THREE.RepeatWrapping;
   towerTexture.wrapT = THREE.RepeatWrapping;
   towerTexture.repeat.set( 1, 1 );
-  const buildTextMaterial = new THREE.MeshStandardMaterial({
-    map: towerTexture
-  });
+
+  let buildTexture = loader.load('resources/house.jpg');
+  towerTexture.wrapS = THREE.RepeatWrapping;
+  towerTexture.wrapT = THREE.RepeatWrapping;
+  towerTexture.repeat.set( 1, 1 );
   
-  // uniform to provide to the shaders
-  var myUniforms = {
-    pos_lumiere : {type: "v3", value: sunPos},
-    poscamera : {type: "v3", value: camera.position},
-    col_lumiere : {type: "v3", value: sunColor},
-    col_obj: {type: "v3", value: new THREE.Vector3(1.0, 0.6, 0.3)},
-    col_spec_lumiere : {type: "v3", value: sunColor},
-    col_spec_obj : {type: "v3", value: new THREE.Vector3(1.0, 0.6, 0.3)},
-    alpha : {type: "f", value: 1}
-  };
-    
-      
-  var shaderMaterial = new THREE.ShaderMaterial({
-      uniforms : myUniforms,
-      flatShading : true,
-      vertexShader:   document.getElementById('vertex_shader').textContent,
-      fragmentShader: document.getElementById('fragment_shader').textContent
-  });
+  let houseTexture = loader.load('resources/building3.jpg');
+  towerTexture.wrapS = THREE.RepeatWrapping;
+  towerTexture.wrapT = THREE.RepeatWrapping;
+  towerTexture.repeat.set( 1, 1 );
 
   // City
 
@@ -139,10 +135,10 @@ function Initialize() {
   city.add(buildings);
   scene.add(city);
 
-  const plane = new THREE.Mesh(
+  plane = new THREE.Mesh(
       new THREE.PlaneGeometry(10, 10),
       new THREE.MeshStandardMaterial({
-          color: 0xe4bb67, 
+          color: 0xBCB9AE, 
           side: THREE.DoubleSide
       }));
   plane.castShadow = false;
@@ -152,7 +148,7 @@ function Initialize() {
   
   const parkGeometry= new THREE.PlaneGeometry(4,5); 
   const parkMaterial = new THREE.MeshStandardMaterial({
-      color: 0x99cc00
+      color: 0x6CB63B
   });
   let park = new THREE.Mesh(parkGeometry, parkMaterial);
   park.castShadow = false;
@@ -162,10 +158,13 @@ function Initialize() {
   park.rotation.x = -Math.PI / 2;
   park.position.y += 0.01;
   
-  function newBuilding(width, height, depth, buildings){
+    //new buildings functions 
+    function newBuilding(width, height, depth, buildings){
       const boxGeometry= new THREE.BoxGeometry(width,height,depth);
-      const material = new THREE.MeshStandardMaterial({color: unselectedColor});
-      const building = new THREE.Mesh(boxGeometry, material);
+      const buildTextMaterial = new THREE.MeshStandardMaterial({
+        map: buildTexture
+      });
+      const building = new THREE.Mesh(boxGeometry, buildTextMaterial);
       building.castShadow = true;
       building.receiveShadow = true;
       building.position.y += height / 2 + 0.001;
@@ -173,33 +172,85 @@ function Initialize() {
       buildings.add(building);
       return building
   }
-  let tower1 = newBuilding(1,5,1, buildings);
-  let tower2 = newBuilding(1,5,1, buildings);
-  let tower3 = newBuilding(1,7,1, buildings);
-  let tower4 = newBuilding(1,5,1.5, buildings);
+  function newTower(width, height, depth, buildings){
+    const boxGeometry= new THREE.BoxGeometry(width,height,depth);
+    const buildTextMaterial = new THREE.MeshStandardMaterial({
+      map: towerTexture
+    });
+    const building = new THREE.Mesh(boxGeometry, buildTextMaterial);
+    building.castShadow = true;
+    building.receiveShadow = true;
+    building.position.y += height / 2 + 0.001;
+    building.rotation.y = Math.PI / 2;
+    buildings.add(building);
+    return building
+  }
+  
+  
+  function newHouse(width, height, depth, buildings){
+    const boxGeometry= new THREE.BoxGeometry(width,height,depth);
+    const buildTextMaterial = new THREE.MeshStandardMaterial({
+      map: houseTexture
+    });
+    const building = new THREE.Mesh(boxGeometry, buildTextMaterial);
+    building.castShadow = true;
+    building.receiveShadow = true;
+    building.position.y += height / 2 + 0.001;
+    building.rotation.y = Math.PI / 2;
+    buildings.add(building);
+    return building
+  }
+
+  let tower1 = newTower(1,5,1, buildings);
+  let tower2 = newTower(1,5,1, buildings);
+  let tower3 = newTower(1,7,1, buildings);
+  let tower4 = newTower(1,5,1.5, buildings);
+  let tower5 = newTower(1,5,1, buildings);
+  let tower6 = newTower(1,7,2, buildings);
+  let tower7 = newTower(1,5,1, buildings);
+  let tower8 = newTower(1,5,1, buildings);
+  let tower9 = newTower(1,7,1, buildings);
+  let tower10 = newTower(1,7,2, buildings);
+  let tower11 = newTower(1,5,1, buildings);
+  let tower12 = newTower(1,5,1, buildings);
+  let tower13 = newTower(1,7,1, buildings);
 
   let build1 = newBuilding(2,3,1, buildings);
   let build2 = newBuilding(2.25,2,2, buildings);
   let build3 = newBuilding(2,3,1, buildings);
+  let build4 = newBuilding(2,3,1, buildings);
+  let build5 = newBuilding(2,3,1, buildings);
 
-  let house1 = newBuilding(1,0.75,0.75, buildings);
-  let house2 = newBuilding(1,1,0.75, buildings);
-  let house3 = newBuilding(1,1,0.75, buildings);
-  let house4 = newBuilding(1,0.75,0.75, buildings);
+  let house1 = newHouse(1,0.75,0.75, buildings);
+  let house2 = newHouse(1,1,0.75, buildings);
+  let house3 = newHouse(1,1,0.75, buildings);
+  let house4 = newHouse(1,0.75,0.75, buildings);
 
   tower1.position.x += 4.25; tower1.position.z += 0.5;
   tower2.position.x -= 4.25; tower2.position.z += 1.75;
   tower3.position.x += 4.25; tower3.position.z += 1.75;
-  tower4.position.x -= 2; tower4.position.z -= 3.25;
+  tower4.position.x -= 2; tower4.position.z -= 3;
+  tower5.position.x += 4.25; tower5.position.z += -0.5;
+  tower6.position.x += 0; tower6.position.z += -4.25;
+  tower7.position.x += 1.5; tower7.position.z += -4.25;
+  tower8.position.x += 3; tower8.position.z += -4.25;
+  tower9.position.x += 4.25; tower9.position.z += -4.25;
+  tower10.position.x += 3.75; tower10.position.z += 4.25;
+  tower11.position.x += 2; tower11.position.z += 4.25;
+  tower12.position.x += -2; tower12.position.z += 4.25;
+  tower13.position.x += -4.25; tower13.position.z += -3.5;
 
   build1.position.x -= 4.25;
   build2.position.x -= 3.75; build2.position.z += 3.5;
-  build3.position.x += 2.75; build3.position.z += 0;
+  build3.position.x += 2.75; build3.position.z += 1.25;
+  build4.position.x -= 4.25; build4.position.z += -2;
+  build5.position.x += 2.75; build5.position.z += -1.25;
 
   house1.position.x -= 2.5; house1.position.z += 0.25;
   house2.position.x -= 2.5; house2.position.z += 1.25;
   house3.position.x -= 2.5; house3.position.z -= 0.75;
   house4.position.x -= 2.5; house4.position.z -= 1.75;
+
 
   city.rotation.y += Math.PI / 4;
   window.requestAnimationFrame(animate);
@@ -212,11 +263,9 @@ function onPointerMove( event ) {
   var rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ( ( event.clientX - rect.left ) / ( rect.right - rect.left ) ) * 2 - 1;
   mouse.y = - ( ( event.clientY - rect.top ) / ( rect.bottom - rect.top) ) * 2 + 1;
-
 }
 
 function hoverBuildings(){
-  console.log("hover called");
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(buildings.children, true);
   if(intersects.length > 0){
@@ -227,18 +276,57 @@ function hoverBuildings(){
       selectedObject = intersects[0].object;
     }
   }
-  
+}
+
+function hoverPlane(){
+  raycaster.setFromCamera(mouse, camera);
+  const intersect = raycaster.intersectObject(plane, true);
+  console.log("intersect : ", intersect[0].point);
+  if(intersect[0]){
+    if(intersect[0].point){
+      point = intersect[0].point;
+    }
+  }
 }
 
 function onKeyDown(event){
-
+  console.log("onKeyDown");
   let keyCode = event.code;
   if (keyCode == 'Enter') {
     if(removing){
       buildings.remove(selectedObject);
     }
+    else if(adding){
+      if(house){
+        console.log("onKeyDown->Adding->house entered.");
+        let newHouse = newHouse(1,1,0.75, buildings);
+        newHouse.position.x += point.x;
+        newHouse.position.z += point.z;
+        buildings.add(newHouse);
+      }
+    }
+    if(updating){
+      document.addEventListener("keydown", onKeyDownUpdate,false);
+    }
   }
 }
+
+function onKeyDownUpdate(event){
+  if(event.key == 0 
+    || event.key == 1
+    || event.key == 2
+    || event.key == 3
+    || event.key == 4
+    || event.key == 5
+    || event.key == 6
+    || event.key == 7
+    || event.key == 8
+    || event.key == 9){
+      selectedObject.scale.y = event.key;
+      selectedObject.position.y = event.key;
+    }
+}
+
 
 function resetMaterial(object){
   if(object.material){
@@ -260,7 +348,7 @@ function animate(){
   window.requestAnimationFrame(animate);
   controls.update();
 
-  if(adding || removing || updating){
+  if(removing || updating){
     //making sure that no object remains selected when it's not hovered.
     if (selectedObject){
         resetMaterial(selectedObject);
@@ -274,14 +362,30 @@ function animate(){
       document.addEventListener("keydown", onKeyDown, false);
     }
   }
+  else if(adding){
+    if (selectedObject){
+      resetMaterial(selectedObject);
+      selectedObject = null;
+    }
+    if (point){
+      point = null;
+    }
+    hoverPlane();
+    if(point){
+      document.addEventListener("keydown", onKeyDown, false);
+    }
+  }
   if(rotateEnabled){
     city.rotation.y += 0.005;
   }
-  if (sunGroup.rotation.z < 0){
-    sunGroup.rotation.z += 0.05;
-  }
-  else {
-    sunGroup.rotation.z += 0.001;
+  if(realisticSunlight){
+
+      if (sunGroup.rotation.z < 0){
+        sunGroup.rotation.z += 0.05;
+      }
+      else {
+        sunGroup.rotation.z += 0.001;
+      }
   }
 
   renderer.render(scene, camera);
@@ -299,19 +403,26 @@ document.getElementById("house").onclick = function() {
   house = true;
   tower = false;
   medium_building = false;
-  console.log("house");
+  removing = false;
+  updating = false;
+  if(!adding){adding = true;}
+  console.log("adding : ", adding, "house", house);
 };
 document.getElementById("tower").onclick = function() {
   house = false;
   tower = true;
   medium_building = false;
-  console.log("tower");
+  removing = false;
+  updating = false;
+  if(!adding){adding = true;}
 };
 document.getElementById("medium_building").onclick = function() {
   house = false;
   tower = false;
   medium_building = true;
-  console.log("medium_building");
+  removing = false;
+  updating = false;
+  if(!adding){adding = true;}
 };
 
 document.getElementById("removeButton").onclick = function() {
@@ -326,6 +437,7 @@ document.getElementById("updateButton").onclick = function() {
   updating = !updating;
 };
 document.getElementById("rotationButton").onclick = function() {ChangeRotationState()};
+document.getElementById("realisticSunlight").onclick = function(){ChangeSunlightState()}
 
 function ChangeRotationState(){
   const previous = rotateEnabled;
@@ -338,6 +450,17 @@ function ChangeRotationState(){
   }
 }
 
+function ChangeSunlightState(){
+  const previous = realisticSunlight;
+  realisticSunlight = !realisticSunlight;
+  if (previous){
+    sunGroup.rotation.z = sunDefaultRotation;
+    document.getElementById("realisticSunlight").innerHTML = "Enable Realistic Sunlight";
+  }
+  else{
+    document.getElementById("realisticSunlight").innerHTML = "Disable Realistic Sunlight";
+  }
+}
 
 
 //EVENT LISTENERS
